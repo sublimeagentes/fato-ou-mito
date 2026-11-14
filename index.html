@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fato ou mito? · Votação</title>
+<meta name="theme-color" content="#3B5951">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Figtree:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --g:#3B5951; --ink:#2F4842; --soft:#5E716C; --line:#DCE3E1; --paper:#fff;
+    --pink:#EB83B5; --blush:#FDEDF5;
+    --true:#1F8A4C; --true-bg:#E4F3EA; --false:#D33A3F; --false-bg:#FBE6E7;
+    --display:"Baloo 2","Arial Rounded MT Bold",system-ui,sans-serif;
+    --body:"Figtree","Segoe UI",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%;background:var(--paper)}
+  body{font-family:var(--body);color:var(--ink);-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;min-height:100dvh}
+  header{background:var(--g);color:#fff;padding:14px 20px calc(14px);display:flex;align-items:center;justify-content:space-between;gap:12px}
+  header h1{font:800 22px/1 var(--display)}
+  header h1 .f{color:#9BE0B4}header h1 .m{color:#FFB0B3}
+  .net{font-size:12px;display:flex;align-items:center;gap:6px;opacity:.9}
+  .net i{width:9px;height:9px;border-radius:50%;background:#F5C451}
+  .net.ok i{background:#7EE2A2}.net.bad i{background:#FF8A8D}
+  main{flex:1;padding:26px 20px 30px;display:flex;flex-direction:column;max-width:560px;width:100%;margin:0 auto}
+  .lbl{font:700 13px var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}
+  .st{font:700 27px/1.22 var(--display);margin:12px 0 26px;text-wrap:balance}
+  .st em{font-style:italic}
+  .btns{display:grid;gap:14px;margin-top:auto}
+  button.vote{font:800 26px/1 var(--display);letter-spacing:.06em;text-transform:uppercase;padding:24px 18px 20px;border-radius:18px;border:3px solid currentColor;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;transition:transform .15s,background-color .2s,color .2s}
+  button.vote svg{width:26px;height:26px}
+  button.vote.v{color:var(--true)}button.vote.f{color:var(--false)}
+  button.vote:active{transform:scale(.97)}
+  button.vote.sel.v{background:var(--true);color:#fff;border-color:var(--true)}
+  button.vote.sel.f{background:var(--false);color:#fff;border-color:var(--false)}
+  button.vote:disabled{cursor:default}
+  button.vote:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+  .hint{margin-top:16px;text-align:center;font-size:15px;color:var(--soft);min-height:1.3em}
+  .wait{margin:auto 0;text-align:center}
+  .wait .big{font:800 34px/1.1 var(--display);color:var(--g);margin-bottom:12px}
+  .wait p{font-size:17px;line-height:1.45;color:var(--soft)}
+  .dots{display:inline-flex;gap:6px;margin-top:22px}
+  .dots i{width:10px;height:10px;border-radius:50%;background:var(--pink);animation:b 1.2s infinite ease-in-out}
+  .dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+  @keyframes b{0%,80%,100%{opacity:.25;transform:scale(.8)}40%{opacity:1;transform:none}}
+  .res{border-radius:18px;padding:22px 22px;margin-top:auto;font-size:18px;line-height:1.4}
+  .res b{display:block;font:800 30px/1.1 var(--display);margin-bottom:6px}
+  .res.ok{background:var(--true-bg);color:#155E35}
+  .res.no{background:var(--false-bg);color:#962328}
+  .res.none{background:#F3F6F5;color:var(--soft)}
+  .ans{display:inline-flex;align-items:center;gap:8px;font:800 20px/1 var(--display);letter-spacing:.06em;text-transform:uppercase;color:#fff;padding:10px 16px 8px;border-radius:12px;margin-bottom:14px}
+  .ans.v{background:var(--true)}.ans.f{background:var(--false)}
+  .wait p.score{font:800 72px/1 var(--display);color:var(--g);margin:12px 0}
+  footer{padding:14px 20px 20px;text-align:center;font-size:13px;color:var(--soft)}
+  footer b{color:var(--g)}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="f">Fato</span> ou <span class="m">mito</span>?</h1>
+  <div class="net" id="net" role="status"><i></i><span>Conectando…</span></div>
+</header>
+<main id="app" aria-live="polite"></main>
+<footer><b>Renata Dantas – Psicóloga</b> · @gestar.sem.neura</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script>
+/* Mesmas afirmações do quiz (só o enunciado; a análise fica no telão). */
+const S = [
+  "A gravidez provoca mudanças estruturais no cérebro.",
+  "Mulheres grávidas ficam menos inteligentes porque apresentam redução do volume de substância cinzenta.",
+  "O chamado <em>mom brain</em> pode envolver mudanças cognitivas, privação de sono e sobrecarga mental.",
+  "O cérebro materno é biologicamente programado para que toda mulher saiba cuidar naturalmente de um bebê.",
+  "O cérebro de pais que não gestaram também pode apresentar mudanças relacionadas à experiência de cuidado.",
+  "Uma mulher que desejou muito a gravidez não deveria apresentar sentimentos contraditórios durante a gestação.",
+  "O vínculo com o bebê pode ser construído progressivamente, inclusive após o nascimento.",
+  "A matrescência é um transtorno psicológico relacionado às mudanças emocionais da maternidade.",
+  "As mudanças cerebrais da gravidez já permitem prever com segurança quais mulheres desenvolverão depressão pós-parto.",
+  "Sentimentos ambivalentes durante a gravidez significam que o vínculo materno está prejudicado."
+];
+const ROOM = "gestarsemneura/quiz/7798095b76";
+const BROKERS = ["wss://broker.emqx.io:8084/mqtt", "wss://broker.hivemq.com:8884/mqtt"];
+const ICON = {
+  v:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg>',
+  f:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>'
+};
+const NAME = {v:"Verdadeiro", f:"Falso"};
+
+/* identificação anônima do aparelho (só para não contar o mesmo voto duas vezes) */
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+let dev = store.get("quiz-dev", null);
+if (!dev) { dev = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()); store.set("quiz-dev", dev); }
+let mine = store.get("quiz-votes-" + ROOM, {});   // {q: "v"|"f"}
+let answers = store.get("quiz-answers-" + ROOM, {}); // gabarito revelado {q: "v"|"f"}
+let state = null; // {q, st, a?}
+
+const app = document.getElementById("app");
+const net = document.getElementById("net");
+function setNet(cls, txt){ net.className = "net " + cls; net.querySelector("span").textContent = txt; }
+
+function render(){
+  if (!state || state.q < 0) {
+    app.innerHTML = `<div class="wait"><p class="big">Tudo pronto!</p><p>Mantenha esta página aberta.<br>As afirmações aparecem aqui quando a professora começar.</p><span class="dots"><i></i><i></i><i></i></span></div>`;
+    return;
+  }
+  if (state.q >= S.length) {
+    const qs = Object.keys(answers);
+    const hits = qs.filter(q => mine[q] && mine[q] === answers[q]).length;
+    app.innerHTML = `<div class="wait"><p class="lbl">Fim do quiz</p><p class="score">${hits}<span style="font-size:.45em;color:var(--soft)"> / ${qs.length}</span></p><p>${hits === 1 ? "acerto" : "acertos"}. Obrigada por participar!</p></div>`;
+    return;
+  }
+  const q = state.q, my = mine[q], open = state.st === 1;
+  let html = `<p class="lbl">Afirmação ${q + 1} / ${S.length}</p><p class="st">${S[q]}</p>`;
+  if (open) {
+    html += `<div class="btns">${["v","f"].map(k => `<button class="vote ${k} ${my===k?"sel":""}" data-k="${k}">${ICON[k]}${NAME[k]}</button>`).join("")}</div>
+      <p class="hint" id="hint">${my ? "Voto registrado. Você pode trocar até a resposta aparecer." : "Toque na sua resposta."}</p>`;
+  } else {
+    const a = state.a || answers[q];
+    if (a) answers[q] = a, store.set("quiz-answers-" + ROOM, answers);
+    const cls = !my ? "none" : my === a ? "ok" : "no";
+    const msg = !my ? "<b>Sem voto</b>Você não votou nesta afirmação." :
+      my === a ? "<b>Você acertou!</b>Sua resposta: " + NAME[my] + "." :
+                 "<b>Não foi desta vez</b>Sua resposta: " + NAME[my] + ".";
+    html += `<div style="margin-top:auto">${a ? `<span class="ans ${a}">${ICON[a]}${NAME[a]}</span>` : ""}<div class="res ${cls}">${msg}</div></div>`;
+  }
+  app.innerHTML = html;
+}
+
+let client = null;
+app.addEventListener("click", e => {
+  const b = e.target.closest("button.vote");
+  if (!b || !state || state.st !== 1) return;
+  const k = b.dataset.k, q = state.q;
+  mine[q] = k; store.set("quiz-votes-" + ROOM, mine);
+  render();
+  send(q, k);
+});
+function send(q, k){
+  if (client && client.connected) client.publish(ROOM + "/votes", JSON.stringify({d: dev, q, a: k}), {qos: 1});
+}
+
+function connect(i){
+  const url = BROKERS[i % BROKERS.length];
+  setNet("", "Conectando…");
+  client = mqtt.connect(url, {clientId: "aluno-" + dev.slice(0, 12) + "-" + Math.random().toString(16).slice(2, 6), connectTimeout: 8000, reconnectPeriod: 3000, clean: true});
+  let ever = false;
+  client.on("connect", () => {
+    ever = true; setNet("ok", "Conectado");
+    client.subscribe(ROOM + "/state", {qos: 1});
+    // reenvia o voto da pergunta aberta (caso a conexão tenha caído)
+    if (state && state.st === 1 && mine[state.q]) send(state.q, mine[state.q]);
+  });
+  client.on("message", (t, m) => {
+    try {
+      const s = JSON.parse(m.toString());
+      if (typeof s.q !== "number" || typeof s.st !== "number") return;
+      if (s.a && s.a !== "v" && s.a !== "f") return;
+      state = s;
+      if (s.q >= 0 && s.q < S.length && s.a) { answers[s.q] = s.a; store.set("quiz-answers-" + ROOM, answers); }
+      render();
+    } catch {}
+  });
+  client.on("offline", () => setNet("bad", "Sem conexão…"));
+  client.on("reconnect", () => setNet("", "Reconectando…"));
+  setTimeout(() => { if (!ever) { client.end(true); connect(i + 1); } }, 9000);
+}
+render();
+connect(0);
+</script>
+</body>
+</html>
